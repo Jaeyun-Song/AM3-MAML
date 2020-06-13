@@ -36,7 +36,7 @@ class MAML(GBML):
         loss_list = []
 
         for (train_input, train_target, test_input, test_target) in zip(train_inputs, train_targets, test_inputs, test_targets):
-            with higher.innerloop_ctx(self.network, self.inner_optimizer, track_higher_grads=is_train) as (fmodel, diffopt):
+            with higher.innerloop_ctx(self.network, self.inner_optimizer, track_higher_grads=False) as (fmodel, diffopt):
 
                 for step in range(self.args.n_inner):
                     self.inner_loop(fmodel, diffopt, train_input, train_target)
@@ -49,7 +49,8 @@ class MAML(GBML):
                     acc_log += get_accuracy(test_logit, test_target).item()/self.batch_size
             
                 if is_train:
-                    outer_grad = torch.autograd.grad(outer_loss, fmodel.parameters(time=0))
+                    params = fmodel.parameters(time=-1)
+                    outer_grad = torch.autograd.grad(outer_loss, params)
                     grad_list.append(outer_grad)
                     loss_list.append(outer_loss.item())
 

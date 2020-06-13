@@ -44,15 +44,15 @@ class BasicBlock(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ProtoResNet(nn.Module):
 
-    def __init__(self, args, batch_size, num_way):
+    def __init__(self, args):
         super().__init__()
         
         self.in_channels = args.in_channels
         self.out_features = args.num_way
-        self.batch_size = batch_size
-        self.num_way = num_way
+        self.batch_size = args.batch_size
+        self.num_way = args.num_way
 
         cfg = [160, 320, 640]
         layers = [3,3,3]
@@ -65,9 +65,7 @@ class ResNet(nn.Module):
             self._make_layer(BasicBlock, cfg[1], layers[1], stride=2),
             self._make_layer(BasicBlock, cfg[2], layers[2], stride=2),
             nn.AvgPool2d(10),
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(cfg[2], self.out_features),
+            nn.Flatten(),
         )
         self.init_params()
         return None
@@ -101,13 +99,10 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes))
         return nn.Sequential(*layers)
 
-    def forward(self, x, is_decoder=True):
-        
-        x = self.encoder(x) # (N, 3, 80, 80) -> (N, 640, 10, 10)
-        x = x.reshape(x.shape[0], -1)
-        if is_decoder:
-            x = self.decoder(x) # (N, out_features)
-        
+    def forward(self, x):
+
+        x = self.encoder(x) # (N, 3, 80, 80) -> (N, 64 * 5 * 5)
+
         return x
 
     def extract_feature(self, train_inputs, mode='stl'):
@@ -117,12 +112,12 @@ class ResNet(nn.Module):
         if mode == 'stl':
             input_var = []
             for i in range(len(train_inputs)):
-                input_var.append(self(train_inputs[i],is_decoder=False))
+                input_var.append(self(train_inputs[i]))
             train_inputs = torch.stack(input_var, dim=0)
         # Share batch statistics
         elif mode == 'mtl':
             train_input_shape = train_inputs.shape[:2]
-            train_inputs = self(train_inputs.reshape([-1]+list(train_inputs.shape[2:])),is_decoder=False)
+            train_inputs = self(train_inputs.reshape([-1]+list(train_inputs.shape[2:])))
             train_inputs = train_inputs.reshape(list(train_input_shape)+list(train_inputs.shape[1:]))
         else:
             raise ValueError('Not supported mode.')

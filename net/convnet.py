@@ -21,16 +21,48 @@ def dense(in_dim, out_dim, hidden_dim, n_dense):
 
 class ConvNet(nn.Module):
 
-    def __init__(self, args):
+    def __init__(self, args, is_decoder=True):
         super().__init__()
 
+        self.is_decoder = is_decoder
         self.in_channels = args.in_channels
         self.out_features = args.num_way
         self.hidden_channels = args.hidden_channels
 
-        self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
+        # self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
+        self.encoder = nn.Sequential(
+            nn.Conv2d(self.in_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+            nn.ReLU(True),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+            nn.ReLU(True),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+            nn.ReLU(True),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+            nn.ReLU(True),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+            nn.ReLU(True),
+
+            nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.hidden_channels),
+        )
+        self.relu = nn.ReLU(True)
+        self.maxpool2d = nn.MaxPool2d(2)
         self.encoder = nn.Sequential(*self.encoder)
-        self.decoder = dense(self.hidden_channels*5*5, self.out_features, args.hidden_dim, args.n_dense)
+        if self.is_decoder:
+            self.decoder = dense(self.hidden_channels*5*5, self.out_features, args.hidden_dim, args.n_dense)
         self.init_params()
         return None
     
@@ -48,10 +80,33 @@ class ConvNet(nn.Module):
                     nn.init.constant_(v, 0.0)
         return None
 
-    def forward(self, x):
+    def forward(self, x, scaler=None):
 
         x = self.encoder(x) # (N, 3, 80, 80) -> (N, 64, 5, 5)
-
-        x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
+        if scaler is None:
+            x = self.relu(x)
+        else:
+            [scale, shift] = scaler
+            x = x*scale + shift
+            x = self.relu(x)
+        
+        if self.is_decoder and scaler is None:
+            x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
 
         return x
+
+    def forward_global_decoder(self, x):
+        x = self.global_decoder(x.reshape(x.shape[0], -1))
+        return x
+
+    @torch.no_grad()
+    def get_global_label(self, target, reverse_dict):
+        target = torch.tensor([self.label2int_dict[reverse_dict[l.item()]] for l in target]).cuda()
+        return target
+
+    def init_global_decoder(self, label_dict, n_dense):
+        self.label2int_dict = {}
+        self.num_global_class = 64
+        for i, (k,v) in enumerate(label_dict.items()):
+            self.label2int_dict[v] = i
+        self.global_decoder = dense(self.hidden_channels*5*5, self.num_global_class, self.hidden_channels, n_dense).cuda()

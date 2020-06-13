@@ -95,6 +95,11 @@ def check_dir(args):
     if not os.path.exists(path):
         os.makedirs(path)
     return None
+# def check_dir(folder_path):
+#     # save path
+#     if not os.path.exists(folder_path):
+#         os.makedirs(folder_path)
+#     return None
 
 # https://github.com/sehkmg/tsvprint/blob/master/utils.py
 def dict2tsv(res, file_name):
@@ -137,3 +142,85 @@ class BestTracker:
         res['best_test_acc'] = self.best_test_acc
 
         return res, is_best
+
+class PretrainBestTracker:
+    def __init__(self, func):
+        functools.update_wrapper(self, func)
+        self.func = func
+        self.best_epoch = 0
+        self.best_val_acc = 0
+
+    def __call__(self, *args, **kwargs):
+        res = self.func(*args, **kwargs)
+        if res['val_acc'] > self.best_val_acc:
+            self.best_epoch = res['epoch']
+            self.best_val_acc = res['val_acc']
+            is_best = True
+        else:
+            is_best = False
+        res['best_epoch'] = self.best_epoch
+        res['best_val_acc'] = self.best_val_acc
+        return res, is_best
+
+def get_label_dict():
+    label_dict = {}
+    f = open("./dataset/class_label.txt", 'r')
+    line = f.readline()
+    while line:
+        line = line.split()
+        label_dict[line[0]] = line[1]
+        line = f.readline()
+    return label_dict
+
+def euclidean_metric(a, b):
+    n = a.shape[0]
+    m = b.shape[0]
+    a = a.unsqueeze(1).expand(n, m, -1)
+    b = b.unsqueeze(0).expand(n, m, -1)
+    logits = -((a - b)**2).sum(dim=2)
+    return logits
+
+def construct_batch(batch, label_dict):
+    batch_size = len(batch['train'][0])
+
+    # Arrange labels based on batch size
+    labels = batch['train'][1]
+    test_labels = batch['test'][1]
+    label_list = []
+    test_label_list = []
+    for i in range(batch_size):
+        label_list_e = [label_dict[l[i]] for l in labels]
+        label_list.append(label_list_e)
+        test_label_list_e = [label_dict[l[i]] for l in test_labels]
+        test_label_list.append(test_label_list_e)
+
+    # Assign numerical label from word label
+    label_dict_list = []
+    reverse_dict_list = []
+    for label_list_e in label_list:
+        cnt = 0
+        label_dict_e = {}
+        reverse_dict_e = {}
+        for l in label_list_e:
+            if not (l in label_dict_e.keys()):
+                label_dict_e[l] = cnt
+                reverse_dict_e[cnt] = l
+                cnt += 1
+        label_dict_list.append(label_dict_e)
+        reverse_dict_list.append(reverse_dict_e)
+
+    # Convert word label to numerical label
+    new_label_list = []
+    new_test_label_list = []
+    for i in range(batch_size):
+        new_label = [label_dict_list[i][l] for l in label_list[i]]
+        new_test_label = [label_dict_list[i][l] for l in test_label_list[i]]
+        new_label_list.append(new_label)
+        new_test_label_list.append(new_test_label)
+    new_label_list = torch.tensor(new_label_list)
+    new_test_label_list = torch.tensor(new_test_label_list)
+
+    batch['train'][1] = new_label_list
+    batch['test'][1] = new_test_label_list
+
+    return batch, reverse_dict_list

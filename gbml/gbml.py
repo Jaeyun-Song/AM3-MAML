@@ -3,8 +3,7 @@ import torch
 import torch.nn as nn
 import os
 
-from net.convnet import ConvNet
-from net.resnet import ResNet
+from net import ConvNet, ResNet, ProtoConvNet, ProtoResNet
 
 class GBML:
     '''
@@ -18,9 +17,16 @@ class GBML:
     def _init_net(self):
         if self.args.net == 'ConvNet':
             self.network = ConvNet(self.args)
+        elif self.args.net == 'ProtoConvNet':
+            self.network = ProtoConvNet(self.args)
         elif self.args.net == 'ResNet':
             self.network = ResNet(self.args)
             self.args.hidden_channels = 640
+            self.args.feature_size = 1
+        elif self.args.net == 'ProtoResNet':
+            self.network = ProtoResNet(self.args)
+            self.args.hidden_channels = 640
+            self.args.feature_size = 1
         self.network.train()
         self.network.cuda()
         return None
@@ -67,7 +73,12 @@ class GBML:
 
     def load_encoder(self):
         path = os.path.join(self.args.result_path, self.args.alg, self.args.load_path)
-        self.network.encoder.load_state_dict(torch.load(path))
+        state_dict = torch.load(path)
+        new_state_dict = {}
+        for (k,v) in state_dict.items():
+            if not 'decoder' in k:
+                new_state_dict[k[8:]]=v
+        self.network.encoder.load_state_dict(new_state_dict)
 
     def save(self):
         path = os.path.join(self.args.result_path, self.args.alg, self.args.save_path)
