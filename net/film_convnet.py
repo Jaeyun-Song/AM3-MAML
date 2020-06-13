@@ -64,7 +64,7 @@ class FiLMConvNet(nn.Module):
                     nn.init.constant_(v, 0.0)
         return None
 
-    def forward(self, x, scaler=None):
+    def forward(self, x, scaler=None, mode='decoder'):
 
         for i in range(self.n_conv):
             x = self.encoder[i](x)
@@ -74,7 +74,7 @@ class FiLMConvNet(nn.Module):
             if i < 4:
                 x = self.maxpool2d(x)
         
-        if self.is_decoder and scaler is None:
+        if self.is_decoder and mode == 'decoder' and scaler is None:
             x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
 
         return x

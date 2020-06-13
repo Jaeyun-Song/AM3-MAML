@@ -55,7 +55,7 @@ class ConvNet(nn.Module):
 
         x = self.encoder(x) # (N, 3, 80, 80) -> (N, 64, 5, 5)
         
-        if self.is_decoder and scaler is None:
+        if self.is_decoder:
             x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
 
         return x
