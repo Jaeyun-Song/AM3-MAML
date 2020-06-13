@@ -19,7 +19,7 @@ def dense(in_dim, out_dim, hidden_dim, n_dense):
     layers[1::2] = [nn.ReLU(True) for i in range(n_dense)]
     return nn.Sequential(*layers)
 
-class ConvNet(nn.Module):
+class FiLMConvNet(nn.Module):
 
     def __init__(self, args, is_decoder=True):
         super().__init__()
@@ -28,9 +28,22 @@ class ConvNet(nn.Module):
         self.in_channels = args.in_channels
         self.out_features = args.num_way
         self.hidden_channels = args.hidden_channels
+        self.n_conv = args.n_conv
 
-        self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
-        self.encoder = nn.Sequential(*self.encoder)
+        # self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
+        self.encoder = [
+            nn.Sequential(
+                nn.Conv2d(self.in_channels, self.hidden_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(self.hidden_channels),
+            )]
+        self.encoder += [
+            nn.Sequential(
+                nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(self.hidden_channels),
+            ) for _ in range(args.n_conv-1)]
+        self.relu = nn.ReLU(True)
+        self.maxpool2d = nn.MaxPool2d(2)
+        self.encoder = nn.ModuleList(self.encoder)
 
         if self.is_decoder:
             self.decoder = dense(self.hidden_channels*5*5, self.out_features, args.hidden_dim, args.n_dense)
@@ -51,9 +64,15 @@ class ConvNet(nn.Module):
                     nn.init.constant_(v, 0.0)
         return None
 
-    def forward(self, x):
+    def forward(self, x, scaler=None):
 
-        x = self.encoder(x) # (N, 3, 80, 80) -> (N, 64, 5, 5)
+        for i in range(self.n_conv):
+            x = self.encoder[i](x)
+            if not scaler is None:
+                x = x * scaler[0][i] + scaler[1][i]
+            x = self.relu(x)
+            if i < 4:
+                x = self.maxpool2d(x)
         
         if self.is_decoder and scaler is None:
             x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
@@ -69,9 +88,9 @@ class ConvNet(nn.Module):
         target = torch.tensor([self.label2int_dict[reverse_dict[l.item()]] for l in target]).cuda()
         return target
 
-    def init_global_decoder(self, label_dict, n_dense):
+    def init_global_decoder(self, label_dict, hidden_dim, n_dense):
         self.label2int_dict = {}
         self.num_global_class = 64
         for i, (k,v) in enumerate(label_dict.items()):
             self.label2int_dict[v] = i
-        self.global_decoder = dense(self.hidden_channels*5*5, self.num_global_class, self.hidden_channels, n_dense).cuda()
+        self.global_decoder = dense(self.hidden_channels*5*5, self.num_global_class, hidden_dim, n_dense).cuda()

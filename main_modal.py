@@ -107,7 +107,7 @@ def main(args):
             model.network.word_embedding = Glove(args, label_dict, args.hidden_channels).cuda()
         else:
             model.network.word_embedding = Glove(args, label_dict).cuda()
-    model.network.init_global_decoder(label_dict, args.n_dense)
+    model.network.init_global_decoder(label_dict, args.hidden_dim, args.n_dense)
     model._init_opt()
 
     if args.load:

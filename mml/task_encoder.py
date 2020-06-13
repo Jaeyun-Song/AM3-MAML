@@ -17,22 +17,23 @@ class TaskEncoder(nn.Module):
         super().__init__()
 
         self.out_features = args.hidden_channels
-        self.hidden_channels = 64
+        self.hidden_channels = args.hidden_channels
         self.feature_size = args.feature_size
         self.batch_size = args.batch_size
         self.num_way = args.num_way
+        self.n_conv = args.n_conv
 
         self.encoder = ConvNet(args, is_decoder=False)
         self.class_enc = nn.Sequential(
             nn.Linear(self.hidden_channels, self.hidden_channels),
             nn.ReLU(True),
-            nn.Linear(self.hidden_channels, self.hidden_channels),
         )
-        self.scaler_gen = nn.Sequential(
+        self.scale_gen = nn.ModuleList([nn.Sequential(
             nn.Linear(self.hidden_channels, self.hidden_channels),
-            nn.ReLU(True),
-            nn.Linear(self.hidden_channels, self.out_features*2),
-        )
+        ) for _ in range(args.n_conv)])
+        self.shift_gen = nn.ModuleList([nn.Sequential(
+            nn.Linear(self.hidden_channels, self.hidden_channels),
+        ) for _ in range(args.n_conv)])
         self.init_params()
         return None
     
@@ -65,8 +66,12 @@ class TaskEncoder(nn.Module):
         task_rep = proto.mean(dim=0,keepdim=True)
 
         # Get Scaler
-        scaler = self.scaler_gen(task_rep).squeeze(dim=0)
-        scale, shift = (scaler[:self.out_features].reshape(1,-1,1,1)+1), scaler[self.out_features:].reshape(1,-1,1,1)
+        scale_list, shift_list = [], []
+        for i in range(self.n_conv):
+            scale, shift = self.scale_gen[i](task_rep).squeeze(dim=0), self.shift_gen[i](task_rep).squeeze(dim=0)
+            scale, shift = scale.reshape(1,-1,1,1)+1, shift.reshape(1,-1,1,1)
+            scale_list.append(scale)
+            shift_list.append(shift)
 
-        return scale, shift
+        return scale_list, shift_list
 

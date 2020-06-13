@@ -17,7 +17,7 @@ class Glove(nn.Module):
         if hidden_channels is None:
             hidden_channels = args.hidden_channels * args.feature_size**2
         else:
-            hidden_channels = 64
+            hidden_channels = args.hidden_channels
 
         # Load Glove
         vectors = bcolz.open(f'{data_path}/840B.300.dat')[:]

@@ -65,13 +65,13 @@ class MMAML(GBML):
                     acc_log += get_accuracy(test_logit, test_target).item()/self.batch_size
             
                 if is_train:
-                    outer_loss += 1e-3*_lambda.abs().mean()
+                    outer_loss += 1e-2*sum([(_scale**2 + _shift**2).mean() for _scale, _shift in zip(scale, shift)])
 
                     # global classification
                     global_target = fmodel.get_global_label(test_target, reverse_dict_list[i])
                     global_logit = fmodel.forward_global_decoder(_test_logit.reshape(_test_logit.size(0),-1))
                     global_cls_loss = F.cross_entropy(global_logit, global_target)
-                    outer_loss = 0.1*outer_loss + 0.9*global_cls_loss
+                    outer_loss = 0.9*outer_loss + 0.1*global_cls_loss
 
                     params = fmodel.parameters(time=0)
                     outer_grad = torch.autograd.grad(outer_loss, params)
