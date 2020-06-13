@@ -29,6 +29,7 @@ class FiLMConvNet(nn.Module):
         self.out_features = args.num_way
         self.hidden_channels = args.hidden_channels
         self.n_conv = args.n_conv
+        self.batch_size = args.batch_size
 
         # self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
         self.encoder = [
@@ -44,6 +45,11 @@ class FiLMConvNet(nn.Module):
         self.relu = nn.ReLU(True)
         self.maxpool2d = nn.MaxPool2d(2)
         self.encoder = nn.ModuleList(self.encoder)
+        self.encoder2 = nn.Sequential(
+                nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(self.hidden_channels),
+                nn.ReLU(True),
+                )
 
         if self.is_decoder:
             self.decoder = dense(self.hidden_channels*5*5, self.out_features, args.hidden_dim, args.n_dense)
@@ -73,6 +79,10 @@ class FiLMConvNet(nn.Module):
             x = self.relu(x)
             if i < 4:
                 x = self.maxpool2d(x)
+        if not scaler is None:
+            x_before = x.clone()
+            x = self.encoder2(x)
+            x = 0.5*x + 0.5*x_before
         
         if self.is_decoder and mode == 'decoder' and scaler is None:
             x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
@@ -85,7 +95,8 @@ class FiLMConvNet(nn.Module):
 
     @torch.no_grad()
     def get_global_label(self, target, reverse_dict):
-        target = torch.tensor([self.label2int_dict[reverse_dict[l.item()]] for l in target]).cuda()
+        target = torch.tensor([[self.label2int_dict[reverse_dict[i][l.item()]] for l in target[i]] for i in range(self.batch_size)]).cuda()
+        target = target.reshape(-1)
         return target
 
     def init_global_decoder(self, label_dict, hidden_dim, n_dense):

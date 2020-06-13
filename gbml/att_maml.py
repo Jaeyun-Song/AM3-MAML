@@ -37,8 +37,13 @@ class AttMAML(GBML):
         grad_list = []
         loss_list = []
 
+        if is_train:
+            n_inner = self.args.n_inner
+        else:
+            n_inner = self.args.n_inner*2
+        inner_optimizer = torch.optim.SGD(list(self.network.encoder2.parameters())+list(self.network.decoder.parameters()), lr=self.args.inner_lr)
         for i, (train_input, train_target, test_input, test_target) in enumerate(zip(train_inputs, train_targets, test_inputs, test_targets)):
-            with higher.innerloop_ctx(self.network, self.inner_optimizer, track_higher_grads=is_train) as (fmodel, diffopt):
+            with higher.innerloop_ctx(self.network, inner_optimizer, track_higher_grads=is_train) as (fmodel, diffopt):
 
                 fmodel(torch.zeros(1,3,84,84).type(torch.float32).cuda())
 
@@ -46,11 +51,11 @@ class AttMAML(GBML):
                 scale, shift = fmodel.task_encoder(train_input, train_target)
 
                 train_input = fmodel(train_input, [scale, shift])
-                for step in range(self.args.n_inner):
+                for step in range(n_inner):
                     self.inner_loop(fmodel, diffopt, train_input, train_target)
 
-                test_logit = fmodel(test_input, [scale, shift])
-                test_logit = fmodel.decoder(test_logit.reshape(test_logit.size(0),-1))
+                _test_logit = fmodel(test_input, [scale, shift])
+                test_logit = fmodel.decoder(_test_logit.reshape(_test_logit.size(0),-1))
                 outer_loss = F.cross_entropy(test_logit, test_target)
                 loss_log += outer_loss.item()/self.batch_size
 
@@ -59,16 +64,21 @@ class AttMAML(GBML):
             
                 if is_train:
                     outer_loss += 1e-2*sum([(_scale**2 + _shift**2).mean() for _scale, _shift in zip(scale, shift)])
+                    outer_loss = 0.5*outer_loss
 
                     # global classification
-                    test_logit = fmodel(test_input, mode='encoder')
-                    global_target = fmodel.get_global_label(test_target, reverse_dict_list[i])
-                    global_logit = fmodel.forward_global_decoder(test_logit.reshape(test_logit.size(0),-1))
-                    global_cls_loss = F.cross_entropy(global_logit, global_target)
-                    outer_loss = 0.5*outer_loss + 0.5*global_cls_loss
+                    if i == 0:
+                        test_logit = fmodel(test_inputs.reshape([-1]+list(test_inputs.shape)[2:]), mode='encoder')
+                        global_target = fmodel.get_global_label(test_targets, reverse_dict_list)
+                        global_logit = fmodel.forward_global_decoder(test_logit)
+                        global_cls_loss = F.cross_entropy(global_logit, global_target)
+                        outer_loss += 0.5*self.args.batch_size*global_cls_loss
+                    else:
+                        outer_loss += 0*fmodel.forward_global_decoder(_test_logit).mean()
 
                     params = fmodel.parameters(time=0)
-                    outer_grad = torch.autograd.grad(outer_loss, params)
+                    outer_grad = torch.autograd.grad(outer_loss, params, allow_unused=True)
+
                     grad_list.append(outer_grad)
                     loss_list.append(outer_loss.item())
 

@@ -28,7 +28,7 @@ class Glove(nn.Module):
         self.word_transformer = nn.Sequential(
             nn.Linear(300, 300),
             nn.ReLU(True),
-            nn.Dropout(0.3),
+            nn.Dropout(0.7),
             nn.Linear(300, hidden_channels),
             nn.ReLU(True),
         )
@@ -36,7 +36,7 @@ class Glove(nn.Module):
         self.lambda_generator = nn.Sequential(
             nn.Linear(hidden_channels, 300),
             nn.ReLU(True),
-            nn.Dropout(0.3),
+            nn.Dropout(0.7),
             nn.Linear(300, 1),
             nn.Sigmoid(),
         )
