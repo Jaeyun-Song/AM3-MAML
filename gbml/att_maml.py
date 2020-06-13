@@ -65,7 +65,7 @@ class AttMAML(GBML):
                     global_target = fmodel.get_global_label(test_target, reverse_dict_list[i])
                     global_logit = fmodel.forward_global_decoder(test_logit.reshape(test_logit.size(0),-1))
                     global_cls_loss = F.cross_entropy(global_logit, global_target)
-                    outer_loss = 0.1*outer_loss + 0.9*global_cls_loss
+                    outer_loss = 0.5*outer_loss + 0.5*global_cls_loss
 
                     params = fmodel.parameters(time=0)
                     outer_grad = torch.autograd.grad(outer_loss, params)

@@ -57,7 +57,7 @@ class MMAML(GBML):
                     self.inner_loop(fmodel, diffopt, train_input, train_target)
 
                 test_logit = fmodel(test_input, [scale, shift])
-                test_logit = fmodel.decoder(test_logit.reshape(_test_logit.size(0),-1))
+                test_logit = fmodel.decoder(test_logit.reshape(test_logit.size(0),-1))
                 outer_loss = F.cross_entropy(test_logit, test_target)
                 loss_log += outer_loss.item()/self.batch_size
 
@@ -72,7 +72,7 @@ class MMAML(GBML):
                     global_target = fmodel.get_global_label(test_target, reverse_dict_list[i])
                     global_logit = fmodel.forward_global_decoder(test_logit.reshape(test_logit.size(0),-1))
                     global_cls_loss = F.cross_entropy(global_logit, global_target)
-                    outer_loss = 0.1*outer_loss + 0.9*global_cls_loss
+                    outer_loss = 0.5*outer_loss + 0.5*global_cls_loss
 
                     params = fmodel.parameters(time=0)
                     outer_grad = torch.autograd.grad(outer_loss, params)
