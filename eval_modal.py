@@ -11,14 +11,15 @@ from torchmeta.utils.data import BatchMetaDataLoader
 from torchmeta.transforms import Categorical, ClassSplitter
 from dataset.miniimagenet import LabelMiniImagenet
 
-from gbml import MMAML, MProtoNet
+from gbml import MMAML, MProtoNet, AttMAML
 from mml.glove_embed import Glove
 from utils import set_seed, set_gpu, check_dir, dict2tsv, BestTracker, get_label_dict, construct_batch
 
 @torch.no_grad()
 def valid(args, model, dataloader, label_dict):
 
-    # model.network.word_embedding.set_eval()
+    if not args.alg == 'AttMAML':
+        model.network.word_embedding.set_eval()
     loss_list = []
     acc_list = []
 
@@ -73,6 +74,8 @@ def main(args):
 
     if args.alg=='MMAML':
         model = MMAML(args)
+    elif args.alg=='AttMAML':
+        model = AttMAML(args)
     elif args.alg=='MProtoNet':
         model = MProtoNet(args)
     else:
@@ -80,11 +83,13 @@ def main(args):
 
     print("=====> Load Pretrained GLOVE")
     label_dict = get_label_dict()
-    # if args.alg=='MMAML':
-    #     model.network.word_embedding = Glove(args, label_dict, args.hidden_channels).cuda()
-    # else:
-    #     model.network.word_embedding = Glove(args, label_dict).cuda()
-    # model._init_opt()
+    if not args.alg == 'AttMAML':
+        if args.alg=='MMAML':
+            model.network.word_embedding = Glove(args, label_dict, args.hidden_channels).cuda()
+        else:
+            model.network.word_embedding = Glove(args, label_dict).cuda()
+    model.network.init_global_decoder(label_dict, args.hidden_dim, args.n_dense)
+    model._init_opt()
 
     print("=====> Load Trained Model")
     if args.load:

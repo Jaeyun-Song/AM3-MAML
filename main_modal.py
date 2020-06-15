@@ -163,7 +163,7 @@ def main(args):
     test_loader = BatchMetaDataLoader(test_dataset, batch_size=args.batch_size,
         shuffle=True, pin_memory=True, num_workers=args.num_workers)
 
-    # args.save_path = '_'.join(['check',str(args.num_shot),args.save_path])
+    args.save_path = '_'.join([str(args.num_shot),args.save_path])
     print("=====> Evaluate Model")
     for epoch in range(args.num_epoch):
 

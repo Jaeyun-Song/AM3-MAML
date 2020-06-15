@@ -49,6 +49,9 @@ class FiLMConvNet(nn.Module):
                 nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
                 nn.BatchNorm2d(self.hidden_channels),
                 nn.ReLU(True),
+                nn.Conv2d(self.hidden_channels, self.hidden_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(self.hidden_channels),
+                nn.ReLU(True),
                 )
 
         if self.is_decoder:
@@ -80,9 +83,9 @@ class FiLMConvNet(nn.Module):
             if i < 4:
                 x = self.maxpool2d(x)
         if not scaler is None:
-            x_before = x.clone()
+            # x_before = x.clone()
             x = self.encoder2(x)
-            x = 0.5*x + 0.5*x_before
+            # x = 0.5*x + 0.5*x_before
         
         if self.is_decoder and mode == 'decoder' and scaler is None:
             x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
