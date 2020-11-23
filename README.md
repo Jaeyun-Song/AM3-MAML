@@ -4,7 +4,7 @@ MAML with the initialization induced by word embedding
 * [AM3-MAML]
 
 ```python
-python3 main_modal.py --alg=CAVIA
+python3 main_modal.py
 ```
 
 ## Results on miniImagenet
