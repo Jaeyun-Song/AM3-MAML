@@ -17,8 +17,7 @@ from utils import set_seed, set_gpu, check_dir, dict2tsv, BestTracker, get_label
 
 def train(args, model, dataloader, label_dict):
 
-    if not args.alg == 'AttMAML':
-        model.network.word_embedding.set_train()
+    model.network.word_embedding.set_train()
     loss_list = []
     acc_list = []
     grad_list = []
@@ -60,8 +59,6 @@ def valid(args, model, dataloader, label_dict):
             if batch_idx >= args.num_valid_batches:
                 break
 
-    if not args.alg == 'AttMAML':
-        print(model._lambda.mean().item(), model._lambda.std().item())
     loss = np.round(np.mean(loss_list), 4)
     acc = np.round(np.mean(acc_list), 4)
 
@@ -104,10 +101,10 @@ def main(args):
     label_dict = get_label_dict()
     if not args.alg == 'AttMAML':
         if args.alg=='MMAML':
-            model.network.word_embedding = Glove(args, label_dict, args.hidden_channels).cuda()
+            model.network.word_embedding = Glove(args, label_dict).cuda()
         else:
             model.network.word_embedding = Glove(args, label_dict).cuda()
-    model.network.init_global_decoder(label_dict, args.hidden_dim, args.n_dense)
+    # model.network.init_global_decoder(label_dict, args.hidden_dim, args.n_dense)
     model._init_opt()
 
     if args.load:
@@ -163,7 +160,7 @@ def main(args):
     test_loader = BatchMetaDataLoader(test_dataset, batch_size=args.batch_size,
         shuffle=True, pin_memory=True, num_workers=args.num_workers)
 
-    args.save_path = '_'.join([str(args.num_shot),args.save_path])
+    args.save_path = '_'.join([args.net, str(args.drop_rate), str(args.num_shot), args.save_path])
     print("=====> Evaluate Model")
     for epoch in range(args.num_epoch):
 
@@ -179,7 +176,7 @@ def main(args):
 
     return None
 
-def parse_args():
+def parse_args(parse_input=None):
     import argparse
 
     parser = argparse.ArgumentParser('Gradient-Based Meta-Learning Algorithms')
@@ -202,18 +199,18 @@ def parse_args():
         help='Number of epochs for meta train.') 
     parser.add_argument('--batch_size', type=int, default=4,
         help='Number of tasks in a mini-batch of tasks (default: 4).')
-    parser.add_argument('--num_train_batches', type=int, default=150,
+    parser.add_argument('--num_train_batches', type=int, default=250,
         help='Number of batches the model is trained over (default: 250).')
     parser.add_argument('--num_valid_batches', type=int, default=150,
         help='Number of batches the model is trained over (default: 150).')
     # meta-learning settings
-    parser.add_argument('--num_shot', type=int, default=1,
+    parser.add_argument('--num_shot', type=int, default=5,
         help='Number of support examples per class (k in "k-shot", default: 1).')
     parser.add_argument('--num_query', type=int, default=15,
         help='Number of query examples per class (k in "k-query", default: 15).')
     parser.add_argument('--num_way', type=int, default=5,
         help='Number of classes per task (N in "N-way", default: 5).')
-    parser.add_argument('--alg', type=str, default='MAML')
+    parser.add_argument('--alg', type=str, default='MMAML')
     # algorithm settings
     parser.add_argument('--n_inner', type=int, default=5)
     parser.add_argument('--inner_lr', type=float, default=1e-2)
@@ -229,8 +226,12 @@ def parse_args():
     parser.add_argument('--in_channels', type=int, default=3)
     parser.add_argument('--hidden_channels', type=int, default=64,
         help='Number of channels for each convolutional layer (default: 64).')
-
-    args = parser.parse_args()
+    parser.add_argument('--drop_rate', type=float, default=0.9)
+        
+    if not parse_input is None:
+        args = parser.parse_args(parse_input)
+    else:
+        args = parser.parse_args()
 
     return args
 

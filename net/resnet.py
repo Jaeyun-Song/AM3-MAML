@@ -46,13 +46,13 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, args, batch_size, num_way):
+    def __init__(self, args):
         super().__init__()
         
         self.in_channels = args.in_channels
         self.out_features = args.num_way
-        self.batch_size = batch_size
-        self.num_way = num_way
+        self.batch_size = args.batch_size
+        self.num_way = args.num_way
 
         cfg = [160, 320, 640]
         layers = [3,3,3]
@@ -66,9 +66,15 @@ class ResNet(nn.Module):
             self._make_layer(BasicBlock, cfg[2], layers[2], stride=2),
             nn.AvgPool2d(10),
         )
-        self.decoder = nn.Sequential(
-            nn.Linear(cfg[2], self.out_features),
-        )
+        if args.alg == 'MAML':
+            self.decoder = nn.Sequential(
+                nn.Linear(cfg[2], self.out_features),
+            )
+        elif args.alg == 'MMAML':
+            self.decoder = nn.ParameterList([
+                nn.Parameter(torch.ones([cfg[2], self.num_way], requires_grad=True)),
+                nn.Parameter(torch.zeros([1,self.num_way], requires_grad=True)),
+            ])
         self.init_params()
         return None
 
@@ -86,6 +92,10 @@ class ResNet(nn.Module):
                     nn.init.constant_(v, 0.0)
         return None
 
+    def init_decoder(self):
+        nn.init.constant_(self.decoder[0], 1.0)
+        nn.init.constant_(self.decoder[1], 0.0)
+
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
@@ -101,7 +111,7 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes))
         return nn.Sequential(*layers)
 
-    def forward(self, x, is_decoder=True):
+    def forward(self, x, is_decoder=False):
         
         x = self.encoder(x) # (N, 3, 80, 80) -> (N, 640, 10, 10)
         x = x.reshape(x.shape[0], -1)

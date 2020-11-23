@@ -18,7 +18,7 @@ class MAML(GBML):
     @torch.enable_grad()
     def inner_loop(self, fmodel, diffopt, train_input, train_target):
 
-        train_logit = fmodel(train_input)
+        train_logit = fmodel.decoder(train_input)
         inner_loss = F.cross_entropy(train_logit, train_target)
         diffopt.step(inner_loss)
 
@@ -36,12 +36,13 @@ class MAML(GBML):
         loss_list = []
 
         for (train_input, train_target, test_input, test_target) in zip(train_inputs, train_targets, test_inputs, test_targets):
-            with higher.innerloop_ctx(self.network, self.inner_optimizer, track_higher_grads=False) as (fmodel, diffopt):
+            with higher.innerloop_ctx(self.network, self.inner_optimizer, track_higher_grads=True) as (fmodel, diffopt):
 
+                train_input = fmodel(train_input, is_decoder=False)
                 for step in range(self.args.n_inner):
                     self.inner_loop(fmodel, diffopt, train_input, train_target)
 
-                test_logit = fmodel(test_input)
+                test_logit = fmodel(test_input, is_decoder=True)
                 outer_loss = F.cross_entropy(test_logit, test_target)
                 loss_log += outer_loss.item()/self.batch_size
 
@@ -49,7 +50,7 @@ class MAML(GBML):
                     acc_log += get_accuracy(test_logit, test_target).item()/self.batch_size
             
                 if is_train:
-                    params = fmodel.parameters(time=-1)
+                    params = fmodel.parameters(time=0)
                     outer_grad = torch.autograd.grad(outer_loss, params)
                     grad_list.append(outer_grad)
                     loss_list.append(outer_loss.item())

@@ -183,7 +183,7 @@ def parse_args():
     parser.add_argument('--num_valid_batches', type=int, default=150,
         help='Number of batches the model is trained over (default: 150).')
     # meta-learning settings
-    parser.add_argument('--num_shot', type=int, default=1,
+    parser.add_argument('--num_shot', type=int, default=5,
         help='Number of support examples per class (k in "k-shot", default: 1).')
     parser.add_argument('--num_query', type=int, default=15,
         help='Number of query examples per class (k in "k-query", default: 15).')

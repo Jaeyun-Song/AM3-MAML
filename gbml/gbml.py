@@ -35,9 +35,9 @@ class GBML:
 
     def _init_opt(self):
         if self.args.inner_opt == 'SGD':
-            self.inner_optimizer = torch.optim.SGD(self.network.parameters(), lr=self.args.inner_lr)
+            self.inner_optimizer = torch.optim.SGD(self.network.decoder.parameters(), lr=self.args.inner_lr)
         elif self.args.inner_opt == 'Adam':
-            self.inner_optimizer = torch.optim.Adam(self.network.parameters(), lr=self.args.inner_lr, betas=(0.0, 0.9))
+            self.inner_optimizer = torch.optim.Adam(self.network.decoder.parameters(), lr=self.args.inner_lr, betas=(0.0, 0.9))
         else:
             raise ValueError('Not supported inner optimizer.')
         if self.args.outer_opt == 'SGD':

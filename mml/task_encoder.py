@@ -22,10 +22,11 @@ class TaskEncoder(nn.Module):
         self.batch_size = args.batch_size
         self.num_way = args.num_way
         self.n_conv = args.n_conv
+        self.num_shot = args.num_shot
 
         self.encoder = ConvNet(args, is_decoder=False)
         self.class_enc = nn.Sequential(
-            nn.Linear(self.hidden_channels, self.hidden_channels),
+            nn.Linear(self.hidden_channels*2, self.hidden_channels),
             nn.ReLU(True),
         )
         self.scale_gen = nn.ModuleList([nn.Sequential(
@@ -54,15 +55,19 @@ class TaskEncoder(nn.Module):
         proto = []
         for j in range(self.num_way):
             idx =  (y == j)
-            proto.append(x[idx].mean(0))
+            if self.num_shot > 1:
+                stat = torch.cat([x[idx].mean(0), x[idx].std(0)],dim=0)
+            else:
+                stat = torch.cat([x[idx].mean(0), torch.zeros_like(x[idx].mean(0))],dim=0)
+            proto.append(stat)
         proto = torch.stack(proto, dim=0)
+        proto = self.class_enc(proto)
 
         # Convex combination with word embeddings
         if not word_embeddings is None:
             proto = _lambda*proto + (1-_lambda)*word_embeddings
 
         # Encode proto and Calculate task representation
-        proto = self.class_enc(proto)
         task_rep = proto.mean(dim=0,keepdim=True)
 
         # Get Scaler

@@ -30,10 +30,18 @@ class ConvNet(nn.Module):
         self.hidden_channels = args.hidden_channels
 
         self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
+        self.encoder += [nn.AvgPool2d(5)]
         self.encoder = nn.Sequential(*self.encoder)
 
-        if self.is_decoder:
-            self.decoder = dense(self.hidden_channels*5*5, self.out_features, args.hidden_dim, args.n_dense)
+        if args.alg == 'MAML':
+            self.decoder = nn.Sequential(
+                nn.Linear(self.hidden_channels, self.out_features),
+            )
+        elif args.alg == 'MMAML':
+            self.decoder = nn.ParameterList([
+                nn.Parameter(torch.ones([self.hidden_channels, self.out_features], requires_grad=True)),
+                nn.Parameter(torch.zeros([1,self.out_features], requires_grad=True)),
+            ])
         self.init_params()
         return None
     
@@ -51,13 +59,17 @@ class ConvNet(nn.Module):
                     nn.init.constant_(v, 0.0)
         return None
 
-    def forward(self, x):
+    def init_decoder(self):
+        nn.init.constant_(self.decoder[0], 1.0)
+        nn.init.constant_(self.decoder[1], 0.0)
 
-        x = self.encoder(x) # (N, 3, 80, 80) -> (N, 64, 5, 5)
+    def forward(self, x, is_decoder=False):
         
-        if self.is_decoder:
-            x = self.decoder(x.reshape(x.shape[0], -1)) # (N, out_features)
-
+        x = self.encoder(x) # (N, 3, 80, 80) -> (N, 640, 10, 10)
+        x = x.reshape(x.shape[0], -1)
+        if is_decoder:
+            x = self.decoder(x) # (N, out_features)
+        
         return x
 
     def forward_global_decoder(self, x):
