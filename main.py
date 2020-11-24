@@ -9,19 +9,23 @@ import os
 from torchmeta.datasets import MiniImagenet
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchmeta.transforms import Categorical, ClassSplitter
+from dataset.miniimagenet import LabelMiniImagenet
 
-from gbml import MAML, ProtoNet
-from utils import set_seed, set_gpu, check_dir, dict2tsv, BestTracker
+from gbml import AM3_MAML
+from mml.glove_embed import Glove
+from utils import set_seed, set_gpu, check_dir, dict2tsv, BestTracker, get_label_dict, construct_batch
 
-def train(args, model, dataloader):
+def train(args, model, dataloader, label_dict):
 
+    model.network.word_embedding.set_train()
     loss_list = []
     acc_list = []
     grad_list = []
     with tqdm(dataloader, total=args.num_train_batches) as pbar:
         for batch_idx, batch in enumerate(pbar):
-
-            loss_log, acc_log, grad_log = model.outer_loop(batch, is_train=True)
+            
+            batch, reverse_dict_list = construct_batch(batch, label_dict)
+            loss_log, acc_log, grad_log = model.outer_loop(batch, reverse_dict_list, is_train=True)
 
             loss_list.append(loss_log)
             acc_list.append(acc_log)
@@ -37,14 +41,16 @@ def train(args, model, dataloader):
     return loss, acc, grad
 
 @torch.no_grad()
-def valid(args, model, dataloader):
+def valid(args, model, dataloader, label_dict):
 
+    model.network.word_embedding.set_eval()
     loss_list = []
     acc_list = []
     with tqdm(dataloader, total=args.num_valid_batches) as pbar:
         for batch_idx, batch in enumerate(pbar):
 
-            loss_log, acc_log = model.outer_loop(batch, is_train=False)
+            batch, reverse_dict_list = construct_batch(batch, label_dict)
+            loss_log, acc_log = model.outer_loop(batch, reverse_dict_list, is_train=False)
 
             loss_list.append(loss_log)
             acc_list.append(acc_log)
@@ -58,13 +64,13 @@ def valid(args, model, dataloader):
     return loss, acc
 
 @BestTracker
-def run_epoch(epoch, args, model, train_loader, valid_loader, test_loader):
+def run_epoch(epoch, args, model, train_loader, valid_loader, test_loader, label_dict):
 
     res = OrderedDict()
     print('Epoch {}'.format(epoch))
-    train_loss, train_acc, train_grad = train(args, model, train_loader)
-    valid_loss, valid_acc = valid(args, model, valid_loader)
-    test_loss, test_acc = valid(args, model, test_loader)
+    train_loss, train_acc, train_grad = train(args, model, train_loader, label_dict)
+    valid_loss, valid_acc = valid(args, model, valid_loader, label_dict)
+    test_loss, test_acc = valid(args, model, test_loader, label_dict)
 
     res['epoch'] = epoch
     res['train_loss'] = train_loss
@@ -81,19 +87,22 @@ def main(args):
 
     args.feature_size = 5
 
-    if args.alg=='MAML':
-        model = MAML(args)
-    elif args.alg=='ProtoNet':
-        model = ProtoNet(args)
+    if args.alg=='AM3_MAML':
+        model = AM3_MAML(args)
     else:
         raise ValueError('Not implemented Meta-Learning Algorithm')
+
+    print("=====> Load Pretrained GLOVE")
+    label_dict = get_label_dict()
+    model.network.word_embedding = Glove(args, label_dict).cuda()
+    model._init_opt()
 
     if args.load:
         model.load()
     elif args.load_encoder:
         model.load_encoder()
 
-    train_dataset = MiniImagenet(args.data_path, num_classes_per_task=args.num_way,
+    train_dataset = LabelMiniImagenet(args.data_path, num_classes_per_task=args.num_way,
                         meta_split='train', 
                         transform=transforms.Compose([
                         transforms.RandomCrop(84, padding=8),
@@ -104,14 +113,14 @@ def main(args):
                             np.array([0.485, 0.456, 0.406]),
                             np.array([0.229, 0.224, 0.225])),
                         ]),
-                        target_transform=Categorical(num_classes=args.num_way),
-                        download=True,
+                        # target_transform=Categorical(num_classes=args.num_way),
+                        # download=True,
                         )
     train_dataset = ClassSplitter(train_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     train_loader = BatchMetaDataLoader(train_dataset, batch_size=args.batch_size,
         shuffle=True, pin_memory=True, num_workers=args.num_workers)
 
-    valid_dataset = MiniImagenet(args.data_path, num_classes_per_task=args.num_way,
+    valid_dataset = LabelMiniImagenet(args.data_path, num_classes_per_task=args.num_way,
                         meta_split='val', 
                         transform=transforms.Compose([
                         transforms.CenterCrop(84),
@@ -120,13 +129,13 @@ def main(args):
                             np.array([0.485, 0.456, 0.406]),
                             np.array([0.229, 0.224, 0.225]))
                         ]),
-                        target_transform=Categorical(num_classes=args.num_way)
+                        # target_transform=Categorical(num_classes=args.num_way)
                         )
     valid_dataset = ClassSplitter(valid_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     valid_loader = BatchMetaDataLoader(valid_dataset, batch_size=args.batch_size,
         shuffle=True, pin_memory=True, num_workers=args.num_workers)
 
-    test_dataset = MiniImagenet(args.data_path, num_classes_per_task=args.num_way,
+    test_dataset = LabelMiniImagenet(args.data_path, num_classes_per_task=args.num_way,
                         meta_split='test', 
                         transform=transforms.Compose([
                         transforms.CenterCrop(84),
@@ -135,15 +144,17 @@ def main(args):
                             np.array([0.485, 0.456, 0.406]),
                             np.array([0.229, 0.224, 0.225]))
                         ]),
-                        target_transform=Categorical(num_classes=args.num_way)
+                        # target_transform=Categorical(num_classes=args.num_way)
                         )
     test_dataset = ClassSplitter(test_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     test_loader = BatchMetaDataLoader(test_dataset, batch_size=args.batch_size,
         shuffle=True, pin_memory=True, num_workers=args.num_workers)
 
+    args.save_path = '_'.join([args.net, str(args.drop_rate), str(args.num_shot), args.save_path])
+    print("=====> Evaluate Model")
     for epoch in range(args.num_epoch):
 
-        res, is_best = run_epoch(epoch, args, model, train_loader, valid_loader, test_loader)
+        res, is_best = run_epoch(epoch, args, model, train_loader, valid_loader, test_loader, label_dict)
         dict2tsv(res, os.path.join(args.result_path, args.alg, args.log_path))
 
         if is_best:
@@ -155,7 +166,7 @@ def main(args):
 
     return None
 
-def parse_args():
+def parse_args(parse_input=None):
     import argparse
 
     parser = argparse.ArgumentParser('Gradient-Based Meta-Learning Algorithms')
@@ -189,7 +200,7 @@ def parse_args():
         help='Number of query examples per class (k in "k-query", default: 15).')
     parser.add_argument('--num_way', type=int, default=5,
         help='Number of classes per task (N in "N-way", default: 5).')
-    parser.add_argument('--alg', type=str, default='MAML')
+    parser.add_argument('--alg', type=str, default='AM3_MAML')
     # algorithm settings
     parser.add_argument('--n_inner', type=int, default=5)
     parser.add_argument('--inner_lr', type=float, default=1e-2)
@@ -205,8 +216,12 @@ def parse_args():
     parser.add_argument('--in_channels', type=int, default=3)
     parser.add_argument('--hidden_channels', type=int, default=64,
         help='Number of channels for each convolutional layer (default: 64).')
-
-    args = parser.parse_args()
+    parser.add_argument('--drop_rate', type=float, default=0.9)
+        
+    if not parse_input is None:
+        args = parser.parse_args(parse_input)
+    else:
+        args = parser.parse_args()
 
     return args
 
