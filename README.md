@@ -1,5 +1,5 @@
 # AM3-MAML
-MAML with the initialization induced by word embedding
+MAML with the initialization induced by word embeddings.
 
 Our code is based on https://github.com/sungyubkim/GBML
 
@@ -15,6 +15,7 @@ python3 main_modal.py
 
 |                | 5way 1shot          | 5way 1shot (ours) | 5way 5shot          | 5way 5shot (ours) |
 | -------------- | ------------------- | ----------------- | ------------------- | ----------------- |
+| MAML           | -                   | -                 | -                   | 63.11 (64)        |
 | AM3-MAML       | -                   | -                 | -                   | 66.41 (64)        |
 
 ## Related work
