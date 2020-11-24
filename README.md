@@ -24,3 +24,6 @@ python3 main_modal.py
 * [Higher](https://github.com/facebookresearch/higher) 
 * [Torchmeta](https://github.com/tristandeleu/pytorch-meta) 
 
+## Acknowledgement
+
+This work was supported by Institute of Information & Communications Technology Planning & Evaluation(IITP) grant funded by the Korea government (MSIT) (No.2019-0-01371, Development of brain-inspired AI with human-like intelligence)
