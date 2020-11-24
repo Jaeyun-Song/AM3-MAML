@@ -1,6 +1,8 @@
 # AM3-MAML
 MAML with the initialization induced by word embedding
 
+Our code is based on https://github.com/sungyubkim/GBML
+
 * [AM3-MAML]
 
 ```python
