@@ -6,7 +6,7 @@ Our code is based on https://github.com/sungyubkim/GBML
 * [AM3-MAML]
 
 ```python
-python3 main_modal.py
+python3 main.py
 ```
 
 ## Results on miniImagenet
@@ -22,8 +22,9 @@ python3 main_modal.py
 
 [1] [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400) \
 [2] [Adaptive Cross-Modal Few-Shot Learning](https://arxiv.org/abs/1902.07104) \
-[3] [Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few Examples](https://arxiv.org/abs/1903.03096) \
-[4] [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf)
+[3] [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf) \
+[4] [Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few Examples](https://arxiv.org/abs/1903.03096) \
+[5] [Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks](https://arxiv.org/abs/1810.00825)
 
 ## Dependencies
 
