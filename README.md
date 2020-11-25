@@ -6,7 +6,7 @@ Our code is based on https://github.com/sungyubkim/GBML
 * [AM3-MAML]
 
 ```python
-python3 main.py
+python3 main.py --download False
 ```
 
 ## Results on miniImagenet
@@ -17,6 +17,13 @@ python3 main.py
 | -------------- | ------------------- | ----------------- | ------------------- | ----------------- |
 | MAML           | -                   | -                 | 63.11 (64)          | -                 |
 | AM3-MAML       | -                   | -                 | -                   | 66.41 (64)        |
+
+## How to run AM3-MAML
+
+1. Download [Common Crawl (840B tokens, 2.2M vocab, cased, 300d vectors, 2.03 GB download)](https://github.com/stanfordnlp/GloVe) in Glove github. \
+2. Extract glove files. \
+3. Install Higher and Torchmeta.
+4. Set "--download True" if you need to download miniimagenet and run the command above it.
 
 ## Related work
 
