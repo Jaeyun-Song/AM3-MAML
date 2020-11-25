@@ -117,7 +117,7 @@ def main(args):
                             np.array([0.229, 0.224, 0.225])),
                         ]),
                         # target_transform=Categorical(num_classes=args.num_way),
-                        # download=True,
+                        download=args.download,
                         )
     train_dataset = ClassSplitter(train_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     train_loader = BatchMetaDataLoader(train_dataset, batch_size=args.batch_size,
@@ -132,7 +132,8 @@ def main(args):
                             np.array([0.485, 0.456, 0.406]),
                             np.array([0.229, 0.224, 0.225]))
                         ]),
-                        # target_transform=Categorical(num_classes=args.num_way)
+                        # target_transform=Categorical(num_classes=args.num_way),
+                        download=args.download,
                         )
     valid_dataset = ClassSplitter(valid_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     valid_loader = BatchMetaDataLoader(valid_dataset, batch_size=args.batch_size,
@@ -147,7 +148,8 @@ def main(args):
                             np.array([0.485, 0.456, 0.406]),
                             np.array([0.229, 0.224, 0.225]))
                         ]),
-                        # target_transform=Categorical(num_classes=args.num_way)
+                        # target_transform=Categorical(num_classes=args.num_way),
+                        download=args.download,
                         )
     test_dataset = ClassSplitter(test_dataset, shuffle=True, num_train_per_class=args.num_shot, num_test_per_class=args.num_query)
     test_loader = BatchMetaDataLoader(test_dataset, batch_size=args.batch_size,
@@ -187,6 +189,7 @@ def parse_args(parse_input=None):
     parser.add_argument('--device', type=int, nargs='+', default=[0], help='0 = CPU.')
     parser.add_argument('--num_workers', type=int, default=4,
         help='Number of workers for data loading (default: 4).')
+    parser.add_argument('--download', type=lambda x: (str(x).lower() == 'true'), default=False)
     # training settings
     parser.add_argument('--num_epoch', type=int, default=400,
         help='Number of epochs for meta train.') 
