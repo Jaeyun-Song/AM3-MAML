@@ -26,6 +26,13 @@ python3 main.py
 [4] [Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few Examples](https://arxiv.org/abs/1903.03096) \
 [5] [Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks](https://arxiv.org/abs/1810.00825)
 
+## Reference for codes
+
+[1] [GBML](https://github.com/sungyubkim/GBML) for the base \
+[2] [Torchmeta](https://github.com/tristandeleu/pytorch-meta) for dataset \
+[3] [glove_pretrain](https://github.com/aerinkim/glove_pretrain) for pretrained glove embeddings \
+[4] [SetTransformer](https://github.com/juho-lee/set_transformer) for set transformer
+
 ## Dependencies
 
 * Python >= 3.6
