@@ -21,8 +21,8 @@ python3 main.py --download False
 ## How to run AM3-MAML
 
 1. Download [Common Crawl (840B tokens, 2.2M vocab, cased, 300d vectors, 2.03 GB download)](https://github.com/stanfordnlp/GloVe) in Glove github. 
-2. Extract glove files. 
-3. Install Higher and Torchmeta.
+2. Extract files and run "mml/preprocess.py" to get word embeddings from pretrained Glove.
+3. Install Higher and Torchmeta (links in dependencies).
 4. Set "--download True" if you need to download miniimagenet and run the command above it.
 
 ## Related work
