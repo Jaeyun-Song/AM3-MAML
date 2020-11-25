@@ -31,17 +31,25 @@ class ConvNet(nn.Module):
 
         self.encoder = [conv3x3(self.in_channels, self.hidden_channels, True)] +  [conv3x3(self.hidden_channels, self.hidden_channels, i<3) for i in range(args.n_conv-1)]
         self.encoder += [nn.AvgPool2d(5)]
+        # self.encoder += [nn.Flatten(), nn.Linear(self.hidden_channels,2)]
         self.encoder = nn.Sequential(*self.encoder)
 
         if args.alg == 'MAML':
             self.decoder = nn.Sequential(
                 nn.Linear(self.hidden_channels, self.out_features),
             )
-        elif args.alg == 'MMAML':
+            # self.decoder = nn.Sequential(
+            #     nn.Linear(2, self.out_features),
+            # )
+        elif args.alg == 'AM3_MAML':
             self.decoder = nn.ParameterList([
                 nn.Parameter(torch.ones([self.hidden_channels, self.out_features], requires_grad=True)),
                 nn.Parameter(torch.zeros([1,self.out_features], requires_grad=True)),
             ])
+            # self.decoder = nn.ParameterList([
+            #     nn.Parameter(torch.ones([2, self.out_features], requires_grad=True)),
+            #     nn.Parameter(torch.zeros([1,self.out_features], requires_grad=True)),
+            # ])
         self.init_params()
         return None
     

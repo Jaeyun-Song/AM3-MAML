@@ -1,3 +1,5 @@
+# Code is from https://github.com/juho-lee/set_transformer
+
 from set_transformer.modules import *
 
 class DeepSet(nn.Module):

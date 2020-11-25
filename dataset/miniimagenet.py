@@ -1,3 +1,6 @@
+# We refer https://github.com/tristandeleu/pytorch-meta
+# We change orignal code to be able to provide word labels of classes 
+
 import os
 import pickle
 from PIL import Image

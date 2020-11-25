@@ -1,3 +1,5 @@
+# We refer https://github.com/aerinkim/glove_pretrain
+
 import pickle
 import bcolz
 import numpy as np

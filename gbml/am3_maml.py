@@ -1,3 +1,6 @@
+# Code is based on https://github.com/sungyubkim/GBML
+# Here is our the main contribution that the initialization is made from word embeddings of labels
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -39,7 +42,7 @@ class AM3_MAML(GBML):
             inner_optimizer = torch.optim.SGD(self.network.decoder, lr=self.args.inner_lr)
             with higher.innerloop_ctx(self.network, inner_optimizer, track_higher_grads=is_train) as (fmodel, diffopt):
 
-                fmodel(torch.zeros(1,3,84,84).type(torch.float32).cuda())
+                fmodel(torch.zeros(1,3,80,80).type(torch.float32).cuda())
 
                 # Convert numerical label to word label
                 target = [[reverse_dict_list[i][j] for j in range(self.args.num_way)]]

@@ -1,3 +1,6 @@
+# We refer https://github.com/sungyubkim/GBML
+# We add our modules and hyperparameters to original code
+
 import numpy as np
 import torch
 import torch.nn.functional as F
