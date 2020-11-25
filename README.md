@@ -29,9 +29,9 @@ python3 main.py
 ## Reference for codes
 
 [1] [GBML](https://github.com/sungyubkim/GBML) for the base \
-[2] [Torchmeta](https://github.com/tristandeleu/pytorch-meta) for dataset \
-[3] [glove_pretrain](https://github.com/aerinkim/glove_pretrain) for pretrained glove embeddings \
-[4] [SetTransformer](https://github.com/juho-lee/set_transformer) for set transformer
+[2] [Torchmeta](https://github.com/tristandeleu/pytorch-meta) for the dataset \
+[3] [glove_pretrain](https://github.com/aerinkim/glove_pretrain) for the pretrained glove embeddings \
+[4] [SetTransformer](https://github.com/juho-lee/set_transformer) for SetTransformer modules
 
 ## Dependencies
 
