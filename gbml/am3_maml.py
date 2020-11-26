@@ -21,7 +21,7 @@ class AM3_MAML(GBML):
     def inner_loop(self, inner_param, diffopt, train_input, train_target, word_proto):
 
         train_logit = torch.matmul(train_input, 2 * word_proto * inner_param[0]) \
-                        - (word_proto**2).sum(dim=0, keepdim=True) + inner_param[1]
+                        - ((word_proto * inner_param[0])**2).sum(dim=0, keepdim=True) + inner_param[1]
         inner_loss = F.cross_entropy(train_logit, train_target)
         diffopt.step(inner_loss)
 
@@ -56,7 +56,7 @@ class AM3_MAML(GBML):
 
                 test_logit = fmodel(test_input)
                 test_logit = torch.matmul(test_logit, 2 * word_proto * fmodel.decoder[0]) \
-                            - (word_proto**2).sum(dim=0, keepdim=True) + fmodel.decoder[1]
+                            - ((word_proto * fmodel.decoder[0])**2).sum(dim=0, keepdim=True) + fmodel.decoder[1]
                 outer_loss = F.cross_entropy(test_logit, test_target)
                 loss_log += outer_loss.item()/self.batch_size
 
