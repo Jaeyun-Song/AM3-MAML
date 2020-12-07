@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/271966060.svg)](https://zenodo.org/badge/latestdoi/271966060)
 # AM3-MAML
 MAML with the initialization induced by word embeddings.
 
