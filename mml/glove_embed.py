@@ -28,8 +28,8 @@ class Glove(nn.Module):
             nn.ReLU(True),
             nn.Dropout(args.drop_rate),
             SAB(300, 300, 4, True),
-            # nn.Linear(300, hidden_channels),
-            nn.Linear(300, 2),
+            nn.Linear(300, hidden_channels),
+            # nn.Linear(300, 2),
         )
 
         # self.word_transformer = nn.Sequential(
