@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import os
 
-from net import ConvNet, ResNet
+from net import ConvNet
 
 class GBML:
     '''
@@ -17,10 +17,6 @@ class GBML:
     def _init_net(self):
         if self.args.net == 'ConvNet':
             self.network = ConvNet(self.args)
-        elif self.args.net == 'ResNet':
-            self.network = ResNet(self.args)
-            self.args.hidden_channels = 640
-            self.args.feature_size = 1
         self.network.train()
         self.network.cuda()
         return None
